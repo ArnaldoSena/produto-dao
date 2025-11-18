@@ -1,6 +1,7 @@
 package br.com.izizi;
 
 import java.util.List;
+import java.util.Objects;
 
 import br.com.izizi.domain.Product;
 import jakarta.transaction.Transactional;
@@ -14,8 +15,11 @@ import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.BadRequestException;
+import jakarta.ws.rs.NotFoundException;
 
-@Path("/hello")
+
+@Path("/products")
 public class GreetingResource {
 
     @GET
@@ -28,14 +32,25 @@ public class GreetingResource {
     @Path("read/{id}")
     @Produces(MediaType.APPLICATION_JSON)
     public Product readProduct(@PathParam("id") long id){
-        return Product.findById(id);
+        Product product = Product.findById(id);
+        if (product == null) {
+            throw new NotFoundException("Product not found with id " + id);
+        }
+        return product;
     }
 
     @GET
     @Path("readall")
     @Produces(MediaType.APPLICATION_JSON)
     public List<Product> listProducts(){
-        return Product.listAll();
+        List<Product> products = Product.listAll();
+        if(Objects.isNull(products)){
+            throw new NotFoundException("");
+        }
+        if(products.isEmpty()){
+            throw new BadRequestException("No products found");
+        }
+        return products;
     }
 
     @POST
@@ -43,15 +58,18 @@ public class GreetingResource {
     @Transactional
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    public void saveProduct(Product produto){
+    public Void saveProduct(Product produto)throws NotFoundException{
         Product.persist(produto);
+        return null;
     }
 
     @DELETE
     @Path("delete/{id}")
+    @Produces(MediaType.APPLICATION_JSON)
     @Transactional
-    public void deleteProduct(@PathParam("id") long id){
-        Product.deleteById(id);
+    public boolean deleteProduct(@PathParam("id") long id){
+        boolean deleted = Product.deleteById(id);
+        return deleted;
     }
 
     @PUT
@@ -59,13 +77,14 @@ public class GreetingResource {
     @Transactional
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    public void updateProduct(@PathParam("id") long id, Product produto){
+    public Void updateProduct(@PathParam("id") long id, Product produto){
         Product existingProduct = Product.findById(id);
         if (existingProduct != null) {
             existingProduct.name = produto.name;
             existingProduct.value = produto.value;
             Product.persist(existingProduct);
         }
+        return null;
     }
 
     @PATCH
@@ -73,7 +92,7 @@ public class GreetingResource {
     @Transactional
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    public void patchProduct(@PathParam("id") long id, Product produto){
+    public Void patchProduct(@PathParam("id") long id, Product produto){
         Product existingProduct = Product.findById(id);
         if (existingProduct != null) {
             if (produto.name != null) {
@@ -83,6 +102,9 @@ public class GreetingResource {
                 existingProduct.value = produto.value;
             }
             Product.persist(existingProduct);
+        } else {
+            throw new NotFoundException("Product not found with id " + id);
         }
+        return null;
     }
 }
